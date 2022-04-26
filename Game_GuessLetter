@@ -1,0 +1,430 @@
+#include <windows.h>
+#include <winuser.h>
+#include "graphics.h"
+#include "extgraph.h"
+#include "imgui.h"
+#include "linkedlist.h"
+#include "time.h"
+#include <stdlib.h>
+//不知道有什么用的文件头全部都加进来了。。。。 
+//用户当前的得分
+static int CurrentPoint; 
+// 判断是否开始游戏，1为开始，0为暂停 
+static int game_continue=0;
+//游戏的目标字母 
+static char mute_letter='a';
+//刷新时间间隔
+static int time_long = 20; 
+//字符下降的位置
+static double down = 0; 
+//是否显示Help页面
+static int Help_allow=-1; 
+//系统开始运行时的时间和 
+clock_t StartTime,FinishTime; 
+//排行榜放不放出来
+static int List_allow = -1; 
+//字母区边框的颜色
+static int LetterDowmColor; 
+//输入字符数组，输入框所在位置，大小 
+static char contain[80]={};
+
+typedef struct List_Chain{
+	int year;
+	int month;
+	int day;
+	int score;
+	int time;
+	struct List_Chain *next;
+} List_;
+
+typedef List_ *ListPtr;
+struct List_Chain* Sort_List(struct List_Chain* head);
+//记录一下要加亮的 ,水了水了 
+int Bright[5];
+
+// 用户的鼠标事件响应函数
+void MouseEventProcess(int x, int y, int button, int event)
+{
+	uiGetMouse(x,y,button,event); //GUI获取鼠标
+	//我发现了，鼠标事件的display是多余的，time的计时已经很够用了，鼠标只会让他变卡 
+	//gamepicture(); // 刷新显示
+}
+//用户的键盘事件响应函数
+void KeyboardEventProcess(int key, int event){
+	uiGetKeyboard(key,event); 
+	gamepicture(); // 刷新显示
+} 
+
+void CharEventProcess(int ch){
+	uiGetChar(ch);
+	gamepicture(); // 刷新显示
+}
+
+
+//用表来控制dowm ,和字母区的颜色变化 
+void TimerEventProcess(int timerID)
+{
+	if( timerID==1 && game_continue ) 
+	{
+		down+=0.1;
+	}
+	if( timerID==2 && game_continue )
+	{
+		LetterDowmColor++;
+		if(LetterDowmColor==5)	LetterDowmColor=0; 
+	}
+	gamepicture(); // 刷新显示
+}
+
+
+void LetterDown(){
+	double height = 9.3;
+	double bottom = 3;
+	double x=15.5;
+	char Label[2];
+	Label[0] = mute_letter;
+	Label[1] = '\0';
+	drawLabel(x, bottom+height-down,Label);
+	if(down>=height-0.15){
+		down = 0;
+		//刷新新字符和输入框 
+		mute_letter = RandomInteger(97,122);
+		memset(contain,'\0',sizeof(contain));
+	}
+}
+
+
+//画游戏的主界面      
+ 
+void LetterPart(){
+	double x=13;
+	double y=3;
+	double height = 10;
+	double width = 5;
+	//画字母出现格子
+	//今儿一定要用上粉色
+	DefineColor("Pink",0.945,0.619,0.761);
+	char *a[5] = {"Red","Black","Green","Blue","Pink"};
+	SetPenColor(a[LetterDowmColor]);
+	MovePen(x,y);
+	DrawLine(width,0);
+	DrawLine(0,height);
+	DrawLine(-width,0);
+	DrawLine(0,-height);
+	 //标签
+	SetPointSize(30);
+	SetPenColor("Black");
+	drawLabel(x+1.25, y+height+0.2,"字母出现区"); 
+	//字母动画
+	LetterDown();
+}
+
+
+
+
+void CountPart(){
+	char points[80];
+	double x=6;
+	double y=7;
+	double width=6;
+	double height=1;
+	sprintf(points,"%d",CurrentPoint);
+	SetPointSize(30);
+	SetPenColor("Black");
+	drawLabel(x-0.2-TextStringWidth("计分区"), y,"计分区"); 
+	SetPenColor("Red");
+	drawLabel(x,y,points);
+}
+
+
+//判断now字符数组中是否有mute字符，有的话返回1，没有的话返回0 
+
+int Judge(char mute,char *now){
+	int i=0;
+	while(now[i]){
+		if(mute==now[i])	return 1;
+		i++;
+	}
+	return 0;
+}
+
+
+void Help(){
+	double x = 0.5;
+	double y = 1.5;
+	double height = 1;
+	char *HelpContain = "开始游戏 Ctrl-W；暂停游戏 Ctrl-E；加速字母下落 Ctrl-R；减速字母下落 Ctrl-T；退出游戏 Ctrl-Y；帮助菜单 Ctrl-I；历史排行榜 Ctrl-O";
+	SetPointSize(13);
+	if(Help_allow+1){
+		drawBox(x,y,TextStringWidth(HelpContain)+1,height, 0, HelpContain, 'M', "Red");
+	}
+}
+
+//排列数列，把分数高，用时少的链表放前面 
+struct List_Chain* Sort_List(struct List_Chain* head){
+    ListPtr  ptr1,ptr2,max,ptr3,pre1,pre2,head2;
+    if(!head) return NULL;
+    int Score,Time,Year,Month,Day;
+    ptr1 = head;
+    while(ptr1){
+        ptr2 = ptr1->next;
+        max = ptr1;
+        while(ptr2){
+            if(max->score<ptr2->score)    max = ptr2;
+            else if(max->score==ptr2->score&&max->time>ptr2->time)	max = ptr2;
+            ptr2 = ptr2->next;
+        }
+        Score = max->score;
+        Time = max->time;
+        Year = max->year;
+        Month = max->month;
+        Day = max->day;
+        max->score = ptr1->score;
+        max->time = ptr1->time;
+        max->year = ptr1->year;
+        max->month = ptr1->month;
+        max->day = ptr1->day;
+        ptr1->time = Time;
+        ptr1->score = Score;
+        ptr1->year = Year;
+        ptr1->month = Month;
+        ptr1->day = Day;
+        ptr1 = ptr1->next;
+    }
+    return head;
+}
+
+//判断要不要加亮，要的话红笔，不要的话黑笔 
+void JudgeBright(struct List_Chain *ptr){
+	if(ptr->year == Bright[0] && ptr->month == Bright[1] && ptr->day == Bright[2] && ptr->time == Bright[4] && ptr->score == Bright[3])
+		SetPenColor("Red");
+	else
+		SetPenColor("Black");
+}
+
+void Rank_List(){
+	if(!(List_allow+1))	return;
+	//进行一波对文本内数据对链表的录入 
+	struct List_Chain* head=(struct List_Chain*)malloc(sizeof(struct List_Chain));
+	struct List_Chain* ptr;
+	ptr = head;
+	int a[5];
+	FILE *grade;
+	grade = fopen("grade.txt","r+");
+	while(!feof(grade)){
+		fgetc(grade);
+		if(fgetc(grade)<'0')	break;
+		else fseek(grade,-2,1);
+		fscanf(grade,"%d%d%d%d%d",&a[0],&a[1],&a[2],&a[3],&a[4]);
+		printf("%d\n",a[4]);
+		ptr->year = a[0];
+		ptr->month = a[1];
+		ptr->day = a[2];
+		ptr->score = a[3];
+		ptr->time = a[4];
+		ptr = ptr->next = (struct List_Chain*)malloc(sizeof(struct List_Chain));
+	}
+	ptr->next = NULL;
+	ptr->year = -1;
+	ptr->month = -1;
+	ptr->day = -1;
+	ptr->score = -1;
+	ptr->time = -1;
+	//此时已经录入完毕了，链表里有所有的数据
+	
+	//此处决定用一个排列的函数来排列 
+	head = Sort_List(head);
+	//然后就是开始显示排行榜了，只显示前10个 
+	double x = 2;
+	double y = 13.3;
+	double height = 1;
+	int rank=1;
+	while(head->next){
+		char label[30];
+		//判断一下head要不要加亮 
+		JudgeBright(head); 
+		sprintf(label,"No:%d score:%d time:%d date:%d %d %d",rank,head->score,head->time,head->year,head->month,head->day);
+		drawLabel(x,y,label);
+		head = head->next;
+		rank++;
+		y--;
+		if(y==8.3&&x==2){
+			x+=4.5; 
+			y=13.3;
+		}
+		else if(y==8.3&&x==6.5){
+			break;
+		}
+	}
+}
+
+
+
+void InputPart(){
+	double x=6;
+	double y=4;
+	double width=6;
+	double height=1;
+	textbox(GenUIID(0), x, y, width, height, contain, sizeof(contain));
+	//如果输入字符串超过格子的话就刷新一下，避免越出 
+	if(strlen(contain)>=22)	memset(contain,'\0',sizeof(contain));
+	//判断contain与mutechar是否符合，符合的话，计分++，字母出现刷新
+	if(Judge(mute_letter,contain)){
+		CurrentPoint++;
+		//将输入框情况，把字符数组清零 
+		memset(contain,'\0',sizeof(contain));
+		//字母出现刷新,用random要一个随机数，对应a-z 
+		mute_letter = RandomInteger(97,122);
+		down=0;
+	}
+	SetPointSize(30);
+	SetPenColor("Black");
+	drawLabel(x-0.2-TextStringWidth("输入区"), y+0.2,"输入区"); 
+}
+
+//退出游戏后的操作 
+void QuitGame(){
+	game_continue = 0;
+	cancelTimer(2);
+	//输入成绩
+	InputGrade();
+	List_allow = 1;
+}
+		
+		
+//改变计时器的时间间隔 
+void ChangeTimer(double n){
+	time_long*=n;
+	cancelTimer(1);
+	startTimer(1,time_long);
+}
+
+void UpMenu(){
+	//上面的两个列表的主要label 
+	static char * menuListSet[] = {"        设置",  
+		" 开始  | Ctrl-W", 
+		" 暂停  | Ctrl-E",
+		" 加速  | Ctrl-R",
+		" 减速  | Ctrl-T",
+		" 退出  | Ctrl-Y"};
+	static char * menuListHelp[] = {"        关于",  
+		"   帮助  | Ctrl-I",
+		"排行榜  | Ctrl-O"};
+	static char * selectedLabel = NULL;
+	
+	double height = 1;
+	double width = 2;
+	double y=15;
+	double x=0;
+	int selection;
+	
+	SetPointSize(13);
+	//画出bar？我也不知道啥东西，好像是画框架 
+	drawMenuBar(x,y-height,width,height);
+	//第一个菜单 
+	selection = menuList(GenUIID(0),x,y-height, width, width,height, menuListSet,sizeof(menuListSet)/sizeof(menuListSet[0]));
+	//用switch实现各种功能 
+	switch(selection){
+		case 1:game_continue=1;StartTime = clock();break;
+		case 2:game_continue=0;break;
+		case 3:ChangeTimer(0.7);break;
+		case 4:ChangeTimer(1.3);break;
+		case 5:QuitGame();break;		
+	}
+	//第二个菜单 
+	selection = menuList(GenUIID(0),x+width,y-height, width, width,height, menuListHelp,sizeof(menuListHelp)/sizeof(menuListHelp[0]));
+	//用switch实现各种功能 
+	
+	switch(selection){
+		case 1:Help_allow*=-1;break;
+		case 2:List_allow*=-1;break;	
+	}
+	
+}
+
+
+
+void DownButton(){
+	double x=0,y=0,w=2,h=1; 
+	SetPointSize(13);
+	if (button(GenUIID(0), x, y, w, h, "开始"))
+	{
+		game_continue=1;
+		startTimer(2,1000);
+	}
+	if (button(GenUIID(0), x+w, y, w, h, "暂停 "))
+	{
+		game_continue=0;
+		cancelTimer(2);
+	}
+	if (button(GenUIID(0), x+2*w, y, w, h, "加速"))
+	{
+		ChangeTimer(0.7);
+	}
+	if (button(GenUIID(0), x+3*w, y, w, h, "减速"))
+	{
+		ChangeTimer(1/0.7);
+	}
+	if (button(GenUIID(0), x+4*w, y, w, h, "退出"))
+	{
+		QuitGame(); 
+	}
+}
+
+void InputGrade(){
+	time_t timep;
+	time(&timep);
+	FinishTime = clock();
+	int TimeLong = (int)(FinishTime-StartTime)/CLOCKS_PER_SEC;
+	struct tm *p;
+	p = gmtime(&timep);
+	FILE *mute;
+	mute = fopen("grade.txt","a+");
+	//把这次的存入bright中 
+	Bright[0] = p->tm_year+1900;
+	Bright[1] = p->tm_mon+1;
+	Bright[2] = p->tm_mday;
+	Bright[3] = CurrentPoint;
+	Bright[4] = TimeLong;
+	//录入文件 
+	fprintf(mute,"%d %d %d %d %d\n",p->tm_year+1900,p->tm_mon+1,p->tm_mday,CurrentPoint,TimeLong);
+	fclose(mute);
+}
+
+void gamepicture(){
+	//清屏好习惯 
+	DisplayClear();
+	//字母出现区 
+	LetterPart();
+	//计数区 
+	CountPart();
+	//输入区 
+	if(game_continue)
+		InputPart();
+	//上方的两个菜单
+	UpMenu(); 
+	//下方的五个按钮 
+	DownButton(); 
+	//Help界面 
+	Help();
+	//排行榜界面
+	Rank_List(); 
+}
+
+
+void Main(){
+
+	SetWindowSize(20, 15);
+	InitGraphics();
+	
+	// 注册各类响应函数
+	
+	registerCharEvent(CharEventProcess);        // 字符
+	registerKeyboardEvent(KeyboardEventProcess);// 键盘
+	registerMouseEvent(MouseEventProcess);      // 鼠标
+	registerTimerEvent(TimerEventProcess);      // 定时器	
+	
+	startTimer(1,time_long);
+	
+	
+}
