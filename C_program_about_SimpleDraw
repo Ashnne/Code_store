@@ -1,0 +1,66 @@
+#include <windows.h>
+#include <winuser.h>
+#include "graphics.h"
+#include "extgraph.h"
+#include "imgui.h"
+#include "linkedlist.h"
+//不知道有什么用的文件头全部都加进来了。。。。 
+
+int Pen = 0;//是否在按左键用笔 
+double PastX=-1,PastY=-1;//用于记录上一次记录 
+
+/*
+	鼠标有三个事件状态
+	1.左键按下的时候Pen=1，判定开始用笔
+	2.左键松开的时候Pen=0，判定不用笔
+	3.鼠标移动且用笔的时候画画
+*/ 
+void MouseEventProcess(int x, int y, int key, int event)
+{
+	double Xnow = ScaleXInches(x);
+	double Ynow = ScaleYInches(y);
+
+	switch (event)
+	{
+	//左键按下，事件1 
+	case BUTTON_DOWN:
+		if(key == LEFT_BUTTON)  
+			Pen = 1;
+		break;
+	//左键松开，事件2 
+	case BUTTON_UP:
+		if(key == LEFT_BUTTON)  
+			Pen = 0;
+		//同时将过去的x坐标变为-1用于判断 
+		PastX = -1;
+		break;
+	//鼠标移动且Pen=1，事件3 
+	case MOUSEMOVE:
+		if (Pen)
+		{
+			MovePen(PastX, PastY);
+			if(PastX != -1)
+			{
+				// 在两点之间连线
+				DrawLine(Xnow - PastX, Ynow - PastY);
+			}
+			PastX = Xnow;
+			PastY = Ynow;
+		}
+		break;
+
+
+
+
+	}
+
+}
+
+
+void Main()
+{
+
+	InitGraphics();
+
+	registerMouseEvent(MouseEventProcess);
+}
