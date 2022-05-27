@@ -1,0 +1,201 @@
+/*
+ Search函数
+ 
+ 1.输入变量及意义：
+ 	char *temp 需要搜索的字符串 
+ 2.无返回值
+ 3.实现的功能：得到搜索字符串头尾指针的位置 
+ 4.需要用到的全局变量： 
+    FILE *buffFile;
+    int cursorBegin;
+    int cursorTail;
+ 5.待优化的功能 
+ 
+ 6.测试函数 
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+int cursorBegin,cursorTail;
+FILE* buffFile;
+void Search(char *temp);
+int main(){
+    buffFile = fopen("buffFile.txt","a+");
+    char* p = "abc";
+    Search(p);
+    printf("%d %d",cursorBegin,cursorTail);
+    return 0;
+}
+ 
+*/ 
+
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+int cursorBegin,cursorTail;
+FILE* buffFile;
+void Search(char *temp);
+void Delete();
+void Write(char);
+void Change(char*,char*);
+int main(){
+    buffFile = fopen("buffFile.txt","a+");
+    char* p = "678";
+    char* q = "123";
+    Search(q);
+    printf("%d %d",cursorBegin,cursorTail);
+    Change(q,p);
+    return 0;
+}
+
+void Change(char* temp,char* replaceContain)
+{
+	while( 1){
+		//先找，
+		Search( temp);
+		//找不到就不找了 
+		if( cursorBegin == cursorTail)	return;
+		//找到的话就换一下
+		//先删 
+		Delete();
+		//再补入
+		int i;
+		i = 0;
+		while( replaceContain[i]){
+			Write( replaceContain[i]);
+			i++;
+		}
+	}
+}
+
+
+void Write(char inputChar) 
+{
+	//如果有选中的内容，就直接删除先
+	if(cursorBegin<cursorTail)	Delete();
+	
+	//下面开始通过缓冲文件将该字符加入 
+	//一个过渡缓冲文件 
+	FILE *tempFile = fopen("tempFile.txt","w");
+	char ch = 1;//缓冲字符
+	int i=0;//计数光标位置 
+	while( !feof(buffFile)){
+		//如果碰到选中区域，就将字符加进去 
+		if( i == cursorBegin )	fputc(inputChar,tempFile);
+		//每一次都刷新一下文件光标，确保要读取的是需要的字符 
+		fseek(buffFile,i,0);
+		//读取buff File中的字符 
+		ch = fgetc(buffFile);
+		//判断一下，如果是EOF说明读完了
+		if(ch == EOF)	break; 
+		//输出给temp 
+		fputc(ch,tempFile);
+		//手动将光标后移 
+		i++;
+	}
+	//将buffFile刷新一遍，将tempFile的内容读进去 
+	fclose(tempFile);
+	fclose(buffFile);
+	buffFile = fopen("buffFile.txt","w+");
+	tempFile = fopen("tempFile.txt","r");
+	while(!feof(tempFile)){
+		//从tempFile中开始读取 
+		ch = getc(tempFile);
+		//如果是EOF说明读完了 
+		if(ch == EOF)	break;
+		//赋给buffFile
+		putc(ch,buffFile); 
+	}
+	//用完文件就关好习惯
+	fclose(tempFile); 
+	//由于加入了一个字符，光标应该要往后一个
+	cursorBegin++;
+	cursorTail++; 
+}
+
+
+void Delete() 
+{
+	//一个过渡缓冲文件 
+	FILE *tempFile = fopen("tempFile.txt","w");
+	//如果光标在文件头，直接返回 
+	if(cursorTail == 0)	return;
+	//如果光标未选中，将光标头前移一个，默认删除前一个 
+	if(cursorBegin == cursorTail)	cursorBegin--;
+	char ch = 1;//缓冲字符 
+	int i = 0;//计数光标位置 
+	while( !feof(buffFile)){
+		//如果碰到选中区域，直接跳过 
+		if( i == cursorBegin ){
+			i = cursorTail;
+			continue;
+		}
+		//每一次都刷新一下文件光标，确保要读取的是需要的字符 
+		fseek(buffFile,i,0);
+		//读取buff File中的字符 
+		ch = fgetc(buffFile);
+		//判断一下，如果是EOF说明读完了
+		if(ch == EOF)	break; 
+		//输出给temp 
+		fputc(ch,tempFile);
+		//手动将光标后移 
+		i++;
+	}
+	//将buffFile刷新一遍，将temp的内容读进去 
+	fclose(tempFile);
+	fclose(buffFile);
+	buffFile = fopen("buffFile.txt","w+");
+	tempFile = fopen("tempFile.txt","r");
+	while(!feof(tempFile)){
+		//从tempFile中开始读取 
+		ch = getc(tempFile);
+		//如果是EOF说明读完了 
+		if(ch == EOF)	break;
+		//赋给buffFile
+		putc(ch,buffFile); 
+	}
+	//用完文件就关好习惯
+	fclose(tempFile); 
+	//将光标末尾和光标头统一（因为中间的已经删除）
+	cursorTail = cursorBegin;	
+}
+
+void Search(char *temp){
+	//找到第几个指针位置了
+	int i=0;
+    int tempLength = strlen(temp);
+    char buff[100];
+	while(!feof(buffFile)){
+        //过渡字符
+        fseek(buffFile,i,0);
+        char ch = fgetc(buffFile);
+        //如果读到的EOF，说明到末尾了，别读了,没找到
+        if(ch == EOF){
+        	break;
+		}
+		//如果第一个字符都没对上，直接continue
+		if(ch != temp[0]){
+			i++;
+			continue;	
+		}
+        //重制光标
+        fseek(buffFile,i,0);
+        //读取长度的数组,并判断是否读取成功，没成功就别读了，到末尾了
+        while(fgets(buff,tempLength+1,buffFile)){
+        	//读取成功了，对比一下，如果是，就把他选中，结束函数
+        	if(!(strcmp(temp,buff))){
+            	cursorBegin = i;
+            	cursorTail = i + tempLength;
+            	return;
+        	}
+        	else{
+        		i++;
+        		fseek(buffFile,i,0);
+			}
+		}
+        //如果没成功，继续循环（缺省就行）        
+	}
+	cursorBegin = cursorTail = 0;
+	
+    return;
+}
