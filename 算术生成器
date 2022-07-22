@@ -1,0 +1,122 @@
+// 支持加减法
+#include<stdio.h>
+#include<math.h>
+#include<stdlib.h>
+#include<time.h>
+
+int main(){
+    FILE * testword;
+    FILE * answer;
+    answer = fopen( "answer(2-3).txt", "a");
+    testword = fopen( "testword(2-3).txt", "a");
+    char *console ="-+";        
+    srand((unsigned)time(NULL));
+    for( int i=0 ; i < 10 ;i++){
+        int a1,a2,a3,a4,a5,a6,b1,b2,b3,temp;
+        b1 = rand() % 2 ;
+        b2 = rand() % 2 ;
+        b3 = rand() % 2 ;
+        a1 = rand() % 300 + 23;
+        a2 = rand() % 270 + 12;
+        a3 = rand() % 298 + 17;
+        a4 = rand() % 279 + 26;
+        a5 = rand() % 358 + 10;
+        a6 = rand() % 325 + 14;
+        if( a1 < a2 ){
+            temp = a1;
+            a1 = a2;
+            a2 = temp;
+        }
+        if( a3 < a4 ){
+            temp = a3;
+            a3 = a4;
+            a4 = temp;
+        }
+        if( a5 < a6 ){
+            temp = a5;
+            a5 = a6;
+            a6 = temp;
+        }
+        if ( a1 == a2 ) a1++;
+        if ( a3 == a4 ) a3++;
+        if ( a5 == a6 ) a5++;
+        fprintf(testword,"%d  %c  %d  =                        %d  %c  %d  =                        %d  %c  %d  =   \n",a1,console[b1],a2,a3,console[b2],a4,a5,console[b3],a6);
+        switch(b1){
+            case 0:fprintf(answer,"%d  %c  %d  =  %d        ",a1,console[b1],a2,a1-a2);break;
+            case 1:fprintf(answer,"%d  %c  %d  =  %d        ",a1,console[b1],a2,a1+a2);break;
+            case 2:fprintf(answer,"%d  %c  %d  =  %d        ",a1,console[b1],a2,a1*a2);break;
+        }
+        switch(b2){
+            case 0:fprintf(answer,"%d  %c  %d  =  %d        ",a3,console[b2],a4,a3-a4);break;
+            case 1:fprintf(answer,"%d  %c  %d  =  %d        ",a3,console[b2],a4,a3+a4);break;
+            case 2:fprintf(answer,"%d  %c  %d  =  %d        ",a3,console[b2],a4,a3*a4);break;
+        }
+        switch(b3){
+            case 0:fprintf(answer,"%d  %c  %d  =  %d \n",a5,console[b3],a6,a5-a6);break;
+            case 1:fprintf(answer,"%d  %c  %d  =  %d \n",a5,console[b3],a6,a5+a6);break;
+            case 2:fprintf(answer,"%d  %c  %d  =  %d \n",a5,console[b3],a6,a5*a6);break;
+        }
+    }
+}
+
+// 支持乘除法
+#include<stdio.h>
+#include<math.h>
+#include<stdlib.h>
+#include<time.h>
+
+int main(){
+    FILE * testword;
+    FILE * answer;
+    answer = fopen( "answer(4-5).txt", "a");
+    testword = fopen( "testword(4-5).txt", "a");
+    char *console ="-+x/";        
+    srand((unsigned)time(NULL));
+    for( int i=0 ; i < 10 ;i++){
+        int a1,a2,a3,a4,a5,a6,b1,b2,b3,temp;
+        b1 = rand() % 3 ;
+        b2 = rand() % 3 ;
+        b3 = 3;
+        a1 = rand() % 80 + 23;
+        a2 = rand() % 70 + 12;
+        a3 = rand() % 50 + 17;
+        a4 = rand() % 70 + 26;
+        a5 = rand() % 20 + 10;
+        a6 = rand() % 30 + 14;
+        if( a1 < a2 ){
+            temp = a1;
+            a1 = a2;
+            a2 = temp;
+        }
+        if( a3 < a4 ){
+            temp = a3;
+            a3 = a4;
+            a4 = temp;
+        }
+        if( a5 < a6 ){
+            temp = a5;
+            a5 = a6;
+            a6 = temp;
+        }
+        if ( a1 == a2 ) a1++;
+        if ( a3 == a4 ) a3++;
+        if ( a5 == a6 ) a5++;
+        fprintf(testword,"%d  %c  %d  =                        %d  %c  %d  =                        %d  %c  %d  =   \n",a1,console[b1],a2,a3,console[b2],a4,a5*a6,console[b3],a5);
+        switch(b1){
+            case 0:fprintf(answer,"%d  %c  %d  =  %d        ",a1,console[b1],a2,a1-a2);break;
+            case 1:fprintf(answer,"%d  %c  %d  =  %d        ",a1,console[b1],a2,a1+a2);break;
+            case 2:fprintf(answer,"%d  %c  %d  =  %d        ",a1,console[b1],a2,a1*a2);break;
+        }
+        switch(b2){
+            case 0:fprintf(answer,"%d  %c  %d  =  %d        ",a3,console[b2],a4,a3-a4);break;
+            case 1:fprintf(answer,"%d  %c  %d  =  %d        ",a3,console[b2],a4,a3+a4);break;
+            case 2:fprintf(answer,"%d  %c  %d  =  %d        ",a3,console[b2],a4,a3*a4);break;
+        }
+        switch(b3){
+            case 0:fprintf(answer,"%d  %c  %d  =  %d \n",a5,console[b3],a6,a5-a6);break;
+            case 1:fprintf(answer,"%d  %c  %d  =  %d \n",a5,console[b3],a6,a5+a6);break;
+            case 2:fprintf(answer,"%d  %c  %d  =  %d \n",a5,console[b3],a6,a5*a6);break;
+            case 3:fprintf(answer,"%d  %c  %d  =  %d \n",a5*a6,console[b3],a5,a6);break;
+        }
+    }
+}
